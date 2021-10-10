@@ -8,8 +8,10 @@ from oauth2client.service_account import ServiceAccountCredentials
 class GoogleIndexationAPI:
     def __init__(self, key_file, urls_list):
         """
-        :param  key_file: .json key Google API filename
+        :param key_file: .json key Google API filename
+        :type key_file:
         :param urls_list: .txt urls list filename
+        :type urls_list:
         """
         self.key_file = key_file
         self.urls_list = urls_list
@@ -24,17 +26,12 @@ class GoogleIndexationAPI:
             choose_msg = input('Choose one of modes and press Enter \n'
                                '1 - SAFE MODE (1 domain processing)\n'
                                '2 - PRO MODE (multi-domain processing)\n')
-            if '1' in choose_msg:
-                mode = 'SAFE'
-                break
-            elif '2' in choose_msg:
-                mode = 'PRO'
-                break
-            else:
+            if choose_msg not in ['1', '2']:
                 print('Please enter correct number')
 
-        print('You chose mode: ', mode)
-        return mode
+            else:
+                print('You chose mode: ', choose_msg)
+                return choose_msg
 
     @staticmethod
     def get_domain():
@@ -43,7 +40,7 @@ class GoogleIndexationAPI:
         :return stripped_domain:
         """
         domain = input('Enter domain you are going to work with: ')
-        stripped_domain = re.sub(r'(https://)|(http://)|(www.)|/(.*)', '', domain)
+        stripped_domain = re.sub(r'(https?://)|(www.)|/(.*)', '', domain)
         print(stripped_domain)
         return stripped_domain
 
@@ -73,7 +70,8 @@ class GoogleIndexationAPI:
     def get_domains(urls):
         """
         Get domains from URLs
-        :param urls:
+        :param urls: all urls from file
+        :type urls: list
         :return _domains:
         """
         domains = set()
@@ -85,11 +83,12 @@ class GoogleIndexationAPI:
     def get_urls(self, mode):
         """
         Gets URL list from a file and clean from not unique and not valid data
-        :param mode:
+        :param mode: Selected by user mode
+        :type mode: str
         :return final_urls:
         """
         urls = []
-        if mode == 'SAFE':
+        if mode == '1':
             domain = self.get_domain()
         else:
             domain = 'No Domain. You chose a PRO mode!'
@@ -99,14 +98,14 @@ class GoogleIndexationAPI:
                     urls.append(line.strip())
 
                 # Clean not unique urs
-                urls = list(set(urls))
                 domains = self.get_domains(urls)
                 # Delete urls without ^http or which don't contain our domain name
-                for url in urls.copy():
-                    if 'http' not in url:
-                        urls.pop(urls.index(url))
-                    if (mode == 'SAFE') and (domain not in url):
-                        urls.pop(urls.index(url))
+                if mode == '2':
+                    urls = [u for u in set(urls)
+                            if u.startswith('http')]
+                elif mode == '1':
+                    urls = [u for u in set(urls)
+                            if u.startswith('http') and domain in u]
 
                 # 200 requests a day quota :(
                 if len(urls) > 200:
@@ -146,24 +145,25 @@ class GoogleIndexationAPI:
         """
         Parses and validates JSON.
         Prints information about domains and Google Search Console rights for API service account.
+        :param domains: Domains from URLs
+        :type domains: set
+        :param mode: Selected by user mode
+        :type mode: str
         """
         with open(self.key_file, 'r') as f:
             key_data = json.load(f)
-            try:
-                if mode == 'PRO':
-                    print('Your domains: ', domains)
-                input(f'Please add OWNER rights in GSC resource(s) to: {key_data["client_email"]} \nand press Enter')
-
-            except Exception as e:
-                print(e, type(e))
-                exit()
+            if mode == '2':
+                print('Your domains: ', domains)
+            input(f'Please add OWNER rights in GSC resource(s) to: {key_data["client_email"]} \nand press Enter')
 
     def single_request_index(self, url, method):
         """
         Makes a request to Google Indexing API with a selected method
-        :param url:
-        :param method:
-        :return content:
+        :param url: URL
+        :type url: str
+        :param method: Selected by user mode
+        :type method: str
+        :return content: Response from API
         """
         api_scopes = ["https://www.googleapis.com/auth/indexing"]
         api_endpoint = "https://indexing.googleapis.com/v3/urlNotifications:publish"
@@ -194,8 +194,7 @@ class GoogleIndexationAPI:
                 result = self.single_request_index(url, method)
                 f.write(f'{url}: {result}\n')
 
-        print(f'Done! We\'ve sent {len(urls)} URLs to Googlebot.\n'
-              f'You can check responses in logs.txt')
+        print(f"Done! We've sent {len(urls)} URLs to Googlebot. \nYou can check responses in logs.txt")
 
 
 if __name__ == '__main__':
