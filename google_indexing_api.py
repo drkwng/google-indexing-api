@@ -1,5 +1,6 @@
-import json
 import re
+import json
+import csv
 
 import httplib2
 from oauth2client.service_account import ServiceAccountCredentials
@@ -51,7 +52,7 @@ class GoogleIndexationAPI:
         :return method: method name
         """
         while True:
-            choose_msg = input('Choose one of methods (print number) and press Enter \n'
+            choose_msg = input('\nChoose one of methods (print number) and press Enter \n'
                                '1 - URL_UPDATED\n'
                                '2 - URL_DELETED:\n')
             if '1' in choose_msg:
@@ -153,8 +154,8 @@ class GoogleIndexationAPI:
         with open(self.key_file, 'r') as f:
             key_data = json.load(f)
             if mode == '2':
-                print('Your domains: ', domains)
-            input(f'Please add OWNER rights in GSC resource(s) to: {key_data["client_email"]} \nand press Enter')
+                print('\nYour domains: ', domains)
+            input(f'\nPlease add OWNER rights in GSC resource(s) to: {key_data["client_email"]} \nand press Enter')
 
     def single_request_index(self, url, method):
         """
@@ -173,10 +174,27 @@ class GoogleIndexationAPI:
             http = credentials.authorize(httplib2.Http())
             r_content = """{""" + f"'url': '{url}', 'type': '{method}'" + """}"""
             response, content = http.request(api_endpoint, method="POST", body=r_content)
-            return content
+            log = [url, method, response.status, content]
+            return log
 
         except Exception as e:
             print(e, type(e))
+
+    @staticmethod
+    def parse_response(content):
+        """
+        Parses error response
+        :param content: Error API response
+        :type content: bytes
+        :return result: parsed API response
+        :rtype result: list
+        """
+        try:
+            json_line = json.loads(content)
+            result = [json_line['error']['message'], json_line['error']['status']]
+        except Exception as e:
+            result = ['API response parse error', e]
+        return result
 
     def indexation_worker(self):
         """
@@ -189,12 +207,18 @@ class GoogleIndexationAPI:
         self.parse_json_key(domains, mode)
         method = self.choose_method()
         print('Processing... Please wait')
-        with open('logs.txt', 'w', encoding='utf-8') as f:
+        with open('logs.csv', 'w', encoding='utf-8', newline='') as f:
+            my_csv = csv.writer(f, delimiter='\t')
+            header = ['URL', 'METHOD', 'STATUS_CODE', 'ERROR_MESSAGE', 'ERROR_STATUS']
+            my_csv.writerow(header)
             for url in urls:
                 result = self.single_request_index(url, method)
-                f.write(f'{url}: {result}\n')
+                log = result[0:3]
+                if result[2] != 200:
+                    log.extend(self.parse_response(result[3]))
+                my_csv.writerow(log)
 
-        print(f"Done! We've sent {len(urls)} URLs to Googlebot. \nYou can check responses in logs.txt")
+        print(f"\nDone! We've sent {len(urls)} URLs to Googlebot. \nYou can check responses in logs.csv")
 
 
 if __name__ == '__main__':

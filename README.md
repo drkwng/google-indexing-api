@@ -11,9 +11,10 @@ Made on Python 3.8.x
 UPDATE: Use PRO mode after starting program to send different URLs with different domains.
 
 Don't forget to install oauth2client. Enter in cmd:
-pip install oauth2client
+
+`pip install oauth2client`
 
 !!! Only 200 requests per day (Google API Indexing quota/account). Create more accounts to send more URLs🙊 
-The program saves API response content and URLs over 200 quotas in .txt files.
+The program saves API response content into .csv file and URLs over 200 quotas into .txt file.
 
 I appreciate your bug reports and suggestions🖖
