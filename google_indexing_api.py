@@ -135,7 +135,6 @@ class GoogleIndexationAPI:
                 if len(final_urls) < 1:
                     assert print('There are no urls in your file')
                     exit()
-
                 return final_urls, domains
 
         except Exception as e:
@@ -206,6 +205,9 @@ class GoogleIndexationAPI:
         urls, domains = self.get_urls(mode)
         self.parse_json_key(domains, mode)
         method = self.choose_method()
+        print(f'{len(urls)} URLs\n'
+              f'{mode} mode chosen\n'
+              f'{method} method chosen\n')
         print('Processing... Please wait')
         with open('logs.csv', 'w', encoding='utf-8', newline='') as f:
             my_csv = csv.writer(f, delimiter='\t')
