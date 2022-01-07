@@ -1,4 +1,4 @@
-# Google Indexing API (Read before starting)
+# Google Indexing API (Read before starting) by [DRKWNG](https://drkwng.rocks)
 
 Made on Python 3.8.x
 
